@@ -35,7 +35,7 @@ let circuitBreaker: CircuitBreakerService;
 
 beforeEach(() => {
   // Fresh in-memory Redis for each test — no state leaks between tests
-  redis = new RedisMock() as unknown as Redis;
+  redis = new RedisMock();
   circuitBreaker = new CircuitBreakerService(redis);
 });
 
@@ -48,7 +48,9 @@ describe('initial state', () => {
   });
 
   it('should allow calls when state is CLOSED', async () => {
-    await expect(circuitBreaker.isAllowed(SERVICE, CONFIG)).resolves.not.toThrow();
+    await expect(
+      circuitBreaker.isAllowed(SERVICE, CONFIG),
+    ).resolves.not.toThrow();
   });
 });
 
@@ -115,7 +117,9 @@ describe('OPEN → HALF_OPEN transition', () => {
   it('should allow a probe call after cooldown expires (HALF_OPEN)', async () => {
     jest.advanceTimersByTime(CONFIG.cooldownMs);
 
-    await expect(circuitBreaker.isAllowed(SERVICE, CONFIG)).resolves.not.toThrow();
+    await expect(
+      circuitBreaker.isAllowed(SERVICE, CONFIG),
+    ).resolves.not.toThrow();
     expect(await circuitBreaker.getState(SERVICE)).toBe(CircuitState.HALF_OPEN);
   });
 });
@@ -159,6 +163,8 @@ describe('reset', () => {
     await circuitBreaker.reset(SERVICE);
 
     expect(await circuitBreaker.getState(SERVICE)).toBe(CircuitState.CLOSED);
-    await expect(circuitBreaker.isAllowed(SERVICE, CONFIG)).resolves.not.toThrow();
+    await expect(
+      circuitBreaker.isAllowed(SERVICE, CONFIG),
+    ).resolves.not.toThrow();
   });
 });

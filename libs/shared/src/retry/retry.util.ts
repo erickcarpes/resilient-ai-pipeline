@@ -32,7 +32,9 @@ export class MaxRetriesExceededError extends Error {
   public readonly attempts: number;
 
   constructor(lastError: Error, attempts: number) {
-    super(`Max retries (${attempts}) exceeded. Last error: ${lastError.message}`);
+    super(
+      `Max retries (${attempts}) exceeded. Last error: ${lastError.message}`,
+    );
     this.name = 'MaxRetriesExceededError';
     this.lastError = lastError;
     this.attempts = attempts;
@@ -63,8 +65,10 @@ export const sleep = (ms: number): Promise<void> =>
  * (retry every 1s) keep hammering it. Exponential retries give it space
  * to recover, while still retrying quickly for transient errors.
  */
-export const calculateBackoff = (attempt: number, baseDelayMs: number): number =>
-  baseDelayMs * Math.pow(2, attempt - 1);
+export const calculateBackoff = (
+  attempt: number,
+  baseDelayMs: number,
+): number => baseDelayMs * Math.pow(2, attempt - 1);
 
 /**
  * Adds random jitter to a delay.

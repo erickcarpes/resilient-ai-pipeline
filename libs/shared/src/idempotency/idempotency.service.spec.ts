@@ -10,7 +10,7 @@ let redis: Redis;
 let idempotency: IdempotencyService;
 
 beforeEach(() => {
-  redis = new RedisMock() as unknown as Redis;
+  redis = new RedisMock();
   idempotency = new IdempotencyService(redis);
 });
 
@@ -31,7 +31,10 @@ describe('get', () => {
     const data = { transcript: 'Hello world', durationMs: 1200 };
     await idempotency.set('transcription', 'meeting-abc:1', data);
 
-    const result = await idempotency.get<typeof data>('transcription', 'meeting-abc:1');
+    const result = await idempotency.get<typeof data>(
+      'transcription',
+      'meeting-abc:1',
+    );
     expect(result).toEqual(data);
   });
 
@@ -44,7 +47,10 @@ describe('get', () => {
     };
     await idempotency.set('insights', 'meeting-xyz:1', insights);
 
-    const result = await idempotency.get<typeof insights>('insights', 'meeting-xyz:1');
+    const result = await idempotency.get<typeof insights>(
+      'insights',
+      'meeting-xyz:1',
+    );
     expect(result).toEqual(insights);
   });
 });
@@ -52,7 +58,10 @@ describe('get', () => {
 describe('set', () => {
   it('should store a value that is then retrievable', async () => {
     await idempotency.set('cleaning', 'key-1', { cleaned: true });
-    const result = await idempotency.get<{ cleaned: boolean }>('cleaning', 'key-1');
+    const result = await idempotency.get<{ cleaned: boolean }>(
+      'cleaning',
+      'key-1',
+    );
     expect(result?.cleaned).toBe(true);
   });
 
@@ -64,8 +73,14 @@ describe('set', () => {
     await idempotency.set('transcription', 'meeting-abc:1', dataA);
     await idempotency.set('cleaning', 'meeting-abc:1', dataB);
 
-    const resultA = await idempotency.get<typeof dataA>('transcription', 'meeting-abc:1');
-    const resultB = await idempotency.get<typeof dataB>('cleaning', 'meeting-abc:1');
+    const resultA = await idempotency.get<typeof dataA>(
+      'transcription',
+      'meeting-abc:1',
+    );
+    const resultB = await idempotency.get<typeof dataB>(
+      'cleaning',
+      'meeting-abc:1',
+    );
 
     expect(resultA).toEqual(dataA);
     expect(resultB).toEqual(dataB);

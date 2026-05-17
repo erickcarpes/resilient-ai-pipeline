@@ -1,14 +1,4 @@
-// =============================================================================
 // @pipeline/shared — Public API
-// =============================================================================
-// Everything exported from here is accessible to all apps in the monorepo via:
-//   import { ... } from '@pipeline/shared';
-//
-// Internal implementation details (e.g., redis.constants.ts) are exported
-// so apps can use the REDIS_CLIENT token for their own providers if needed.
-// =============================================================================
-
-// ── Module ────────────────────────────────────────────────────────────────────
 export { SharedModule } from './shared.module';
 
 // ── Redis ─────────────────────────────────────────────────────────────────────
@@ -24,8 +14,11 @@ export {
   type JobStatus,
   type TranscriptionResult,
   type CleaningResult,
-  type InsightsResult,
+  type SummaryResult,
+  type DeadlinesResult,
 } from './models/job.models';
+
+export { FAN_IN_KEYS, FAN_IN_TTL_SECONDS } from './models/fan-in.constants';
 
 // ── Retry Utilities ───────────────────────────────────────────────────────────
 export {

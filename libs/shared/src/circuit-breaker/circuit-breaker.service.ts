@@ -35,8 +35,8 @@ import { REDIS_CLIENT } from '../redis/redis.constants';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export enum CircuitState {
-  CLOSED = 'CLOSED',       // Normal operation
-  OPEN = 'OPEN',           // Failing fast — not calling downstream
+  CLOSED = 'CLOSED', // Normal operation
+  OPEN = 'OPEN', // Failing fast — not calling downstream
   HALF_OPEN = 'HALF_OPEN', // Probe state — allowing one call to test recovery
 }
 
@@ -44,7 +44,7 @@ export class CircuitOpenError extends Error {
   constructor(service: string, cooldownRemainingMs: number) {
     super(
       `Circuit breaker for "${service}" is OPEN. ` +
-      `Failing fast. Cooldown remaining: ~${Math.ceil(cooldownRemainingMs / 1000)}s`,
+        `Failing fast. Cooldown remaining: ~${Math.ceil(cooldownRemainingMs / 1000)}s`,
     );
     this.name = 'CircuitOpenError';
   }
@@ -99,7 +99,10 @@ export class CircuitBreakerService {
    *
    * Throws `CircuitOpenError` if the call should be blocked.
    */
-  async isAllowed(service: string, config: CircuitBreakerConfig): Promise<void> {
+  async isAllowed(
+    service: string,
+    config: CircuitBreakerConfig,
+  ): Promise<void> {
     const state = await this.getState(service);
 
     if (state === CircuitState.CLOSED || state === CircuitState.HALF_OPEN) {
@@ -114,7 +117,9 @@ export class CircuitBreakerService {
     if (elapsed >= config.cooldownMs) {
       // Cooldown expired → transition to HALF_OPEN and allow this probe call
       await this.redis.set(this.stateKey(service), CircuitState.HALF_OPEN);
-      this.logger.warn(`[${service}] Circuit: OPEN → HALF_OPEN (probing recovery)`);
+      this.logger.warn(
+        `[${service}] Circuit: OPEN → HALF_OPEN (probing recovery)`,
+      );
       return;
     }
 
@@ -151,14 +156,19 @@ export class CircuitBreakerService {
    * - If CLOSED:    increment counter → open if threshold reached
    * - If OPEN:      no-op (already open)
    */
-  async recordFailure(service: string, config: CircuitBreakerConfig): Promise<void> {
+  async recordFailure(
+    service: string,
+    config: CircuitBreakerConfig,
+  ): Promise<void> {
     const state = await this.getState(service);
 
     if (state === CircuitState.HALF_OPEN) {
       // The probe call failed — recovery attempt unsuccessful
       await this.redis.set(this.stateKey(service), CircuitState.OPEN);
       await this.redis.set(this.openedAtKey(service), String(Date.now()));
-      this.logger.error(`[${service}] Circuit: HALF_OPEN → OPEN 🔴 (probe failed)`);
+      this.logger.error(
+        `[${service}] Circuit: HALF_OPEN → OPEN 🔴 (probe failed)`,
+      );
       return;
     }
 

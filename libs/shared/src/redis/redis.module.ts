@@ -51,7 +51,7 @@ export class RedisModule {
       module: RedisModule,
       providers: [redisProvider],
       exports: [redisProvider], // Export so other modules can inject REDIS_CLIENT
-      global: true,            // Available across the entire app
+      global: true, // Available across the entire app
     };
   }
 }

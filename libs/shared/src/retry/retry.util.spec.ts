@@ -105,12 +105,17 @@ describe('withTimeout', () => {
   it('should reject with TimeoutError if timeout elapses first', async () => {
     // A promise that never resolves
     const forever = new Promise<string>(() => {});
-    const result = withTimeout(forever, 3000, 'SlowOp');
+    const timeout = 3000;
+    const label = 'SlowOp';
 
-    jest.advanceTimersByTime(3000);
+    const result = withTimeout(forever, timeout, label);
+
+    jest.advanceTimersByTime(timeout);
 
     await expect(result).rejects.toThrow(TimeoutError);
-    await expect(result).rejects.toThrow('SlowOp timed out after 3000ms');
+    await expect(result).rejects.toThrow(
+      `${label} timed out after ${timeout}ms`,
+    );
   });
 
   it('should reject if the original promise rejects before timeout', async () => {

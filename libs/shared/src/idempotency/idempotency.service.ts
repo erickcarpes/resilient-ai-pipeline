@@ -92,7 +92,9 @@ export class IdempotencyService {
   ): Promise<void> {
     const key = this.buildKey(stage, idempotencyKey);
     await this.redis.setex(key, ttlSeconds, JSON.stringify(result));
-    this.logger.debug(`[Idempotency] Cached result for key: ${key} (TTL: ${ttlSeconds}s)`);
+    this.logger.debug(
+      `[Idempotency] Cached result for key: ${key} (TTL: ${ttlSeconds}s)`,
+    );
   }
 
   /**
