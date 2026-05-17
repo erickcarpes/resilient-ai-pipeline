@@ -1,0 +1,119 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────
+# RESILIENT AI PIPELINE — Infrastructure Stack
+# ─────────────────────────────────────────────
+# Run: docker compose up -d
+# Grafana:   http://localhost:3000  (admin/admin)
+# Bull Board: http://localhost:3001/queues
+# Prometheus: http://localhost:9090
+# Redis:      localhost:6379
+# ─────────────────────────────────────────────
+
+services:
+
+  # ── Message Broker + State Store ───────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: pipeline-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Bull Board (Queue Inspector) ────────────
+  # Standalone Bull Board runs as part of the gateway app.
+  # This service just documents the port it's accessible on.
+  # The gateway app itself exposes /queues at :3001.
+
+  # ── OpenTelemetry Collector ─────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.99.0
+    container_name: pipeline-otel-collector
+    volumes:
+      - ./observability/otel-collector-config.yml:/etc/otel-collector-config.yml
+    command: ['--config=/etc/otel-collector-config.yml']
+    ports:
+      - '4317:4317'   # OTLP gRPC receiver
+      - '4318:4318'   # OTLP HTTP receiver
+      - '8889:8889'   # Prometheus metrics exporter (scraped by Prometheus)
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    restart: unless-stopped
+
+  # ── Prometheus (Metrics) ────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: pipeline-prometheus
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - '9090:9090'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # ── Loki (Log Aggregation) ──────────────────
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: pipeline-loki
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    ports:
+      - '3100:3100'
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  # ── Tempo (Distributed Tracing) ─────────────
+  tempo:
+    image: grafana/tempo:2.4.0
+    container_name: pipeline-tempo
+    volumes:
+      - ./observability/tempo-config.yml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+    ports:
+      - '3200:3200'   # Tempo HTTP API
+      - '9411:9411'   # Zipkin receiver
+    command: ['-config.file=/etc/tempo.yaml']
+    restart: unless-stopped
+
+  # ── Grafana (Dashboards — single pane of glass) ──
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: pipeline-grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - '3000:3000'
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:

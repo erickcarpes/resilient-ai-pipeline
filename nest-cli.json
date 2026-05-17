@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/gateway/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "tsConfigPath": "apps/gateway/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/gateway",
+  "projects": {
+    "gateway": {
+      "type": "application",
+      "root": "apps/gateway",
+      "entryFile": "main",
+      "sourceRoot": "apps/gateway/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/gateway/tsconfig.app.json"
+      }
+    },
+    "transcription-worker": {
+      "type": "application",
+      "root": "apps/transcription-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/transcription-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/transcription-worker/tsconfig.app.json"
+      }
+    },
+    "cleaning-worker": {
+      "type": "application",
+      "root": "apps/cleaning-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/cleaning-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/cleaning-worker/tsconfig.app.json"
+      }
+    },
+    "insights-worker": {
+      "type": "application",
+      "root": "apps/insights-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/insights-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/insights-worker/tsconfig.app.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    }
+  }
+}
