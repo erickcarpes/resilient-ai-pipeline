@@ -16,7 +16,7 @@ import { MeetingsModule } from './meetings/meetings.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig],
-      envFilePath: '../../.env',
+      envFilePath: '.env',
     }),
 
     // ── Redis ────────────────────────────────────────────────────────────────

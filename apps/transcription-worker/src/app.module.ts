@@ -6,7 +6,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '../../.env' }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     RedisModule.forRoot({
       host: process.env.REDIS_HOST ?? 'localhost',
       port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
