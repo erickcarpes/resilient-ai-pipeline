@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
@@ -44,5 +45,30 @@ export class MeetingsController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<MeetingStatusDto> {
     return this.meetingsService.findById(id);
+  }
+
+  /**
+   * POST /meetings/load-test/:count
+   * Utility endpoint to dispatch multiple meetings at once to test resilience
+   * and observability.
+   */
+  @Post('load-test/:count')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async loadTest(@Param('count', ParseIntPipe) count: number) {
+    const num = Math.min(count, 100); // Cap at 100 for safety
+    const promises = [];
+
+    for (let i = 0; i < num; i++) {
+      promises.push(
+        this.meetingsService.submit({
+          title: `Load Test Meeting ${i + 1}`,
+          participants: ['Alice', 'Bob'],
+          rawAudioText: `This is a generated payload for load testing. Iteration ${i}. We need to talk about system performance and observability.`,
+        }),
+      );
+    }
+
+    await Promise.all(promises);
+    return { message: `Successfully queued ${num} meetings for load testing.` };
   }
 }
