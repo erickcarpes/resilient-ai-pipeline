@@ -22,13 +22,7 @@
 //    - removeOnFail: false    → keep failed jobs as our DLQ (inspectable)
 // =============================================================================
 
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { randomUUID } from 'crypto';
@@ -115,7 +109,7 @@ export class MeetingsService {
       },
       // Keep jobs visible in Bull Board after completion/failure
       removeOnComplete: { count: 100 }, // Keep last 100 completed
-      removeOnFail: false,              // Never remove failed jobs (our DLQ)
+      removeOnFail: false, // Never remove failed jobs (our DLQ)
     });
 
     this.logger.log(`[${meetingId}] Meeting submitted → transcription queue`);

@@ -25,8 +25,7 @@ export const appConfig = () => ({
   queues: {
     transcription: process.env.TRANSCRIPTION_QUEUE ?? 'transcription',
     cleaning: process.env.CLEANING_QUEUE ?? 'cleaning',
-    insightsSummary:
-      process.env.INSIGHTS_SUMMARY_QUEUE ?? 'insights-summary',
+    insightsSummary: process.env.INSIGHTS_SUMMARY_QUEUE ?? 'insights-summary',
     insightsDeadlines:
       process.env.INSIGHTS_DEADLINES_QUEUE ?? 'insights-deadlines',
   },
@@ -36,10 +35,7 @@ export const appConfig = () => ({
   resilience: {
     retryAttempts: parseInt(process.env.RETRY_ATTEMPTS ?? '5', 10),
     retryBaseDelayMs: parseInt(process.env.RETRY_BASE_DELAY_MS ?? '1000', 10),
-    cbFailureThreshold: parseInt(
-      process.env.CB_FAILURE_THRESHOLD ?? '3',
-      10,
-    ),
+    cbFailureThreshold: parseInt(process.env.CB_FAILURE_THRESHOLD ?? '3', 10),
     cbCooldownMs: parseInt(process.env.CB_COOLDOWN_MS ?? '30000', 10),
   },
 });

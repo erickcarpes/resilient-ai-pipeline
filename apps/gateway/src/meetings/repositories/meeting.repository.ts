@@ -16,7 +16,12 @@
 // =============================================================================
 
 import type { Meeting, MeetingStatus } from '../entities/meeting.entity';
-import type { SummaryResult, DeadlinesResult, TranscriptionResult, CleaningResult } from '@pipeline/shared';
+import type {
+  SummaryResult,
+  DeadlinesResult,
+  TranscriptionResult,
+  CleaningResult,
+} from '@pipeline/shared';
 
 export const MEETING_REPOSITORY = Symbol('MEETING_REPOSITORY');
 

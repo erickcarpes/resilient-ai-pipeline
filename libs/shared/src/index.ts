@@ -1,11 +1,8 @@
-// @pipeline/shared — Public API
 export { SharedModule } from './shared.module';
-
-// ── Redis ─────────────────────────────────────────────────────────────────────
 export { RedisModule } from './redis/redis.module';
 export { REDIS_CLIENT } from './redis/redis.constants';
 
-// ── Models ────────────────────────────────────────────────────────────────────
+// Models
 export {
   JobState,
   QUEUE_NAMES,
@@ -20,7 +17,12 @@ export {
 
 export { FAN_IN_KEYS, FAN_IN_TTL_SECONDS } from './models/fan-in.constants';
 
-// ── Retry Utilities ───────────────────────────────────────────────────────────
+export {
+  MeetingStatus,
+  type Meeting,
+} from './models/meeting.models';
+
+// Retry
 export {
   sleep,
   calculateBackoff,
@@ -32,7 +34,7 @@ export {
   type RetryOptions,
 } from './retry/retry.util';
 
-// ── Circuit Breaker ───────────────────────────────────────────────────────────
+// Circuit Breaker
 export {
   CircuitBreakerService,
   CircuitOpenError,
@@ -40,5 +42,8 @@ export {
   type CircuitBreakerConfig,
 } from './circuit-breaker/circuit-breaker.service';
 
-// ── Idempotency ───────────────────────────────────────────────────────────────
+// Idempotency
 export { IdempotencyService } from './idempotency/idempotency.service';
+
+// Meeting State (used by all workers)
+export { MeetingStateService } from './meeting-state/meeting-state.service';

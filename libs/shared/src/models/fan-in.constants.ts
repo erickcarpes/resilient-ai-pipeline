@@ -35,5 +35,6 @@ export const FAN_IN_KEYS = {
   summaryDone: (meetingId: string) => `fan-in:${meetingId}:summary:done`,
   deadlinesDone: (meetingId: string) => `fan-in:${meetingId}:deadlines:done`,
   summaryResult: (meetingId: string) => `fan-in:${meetingId}:summary:result`,
-  deadlinesResult: (meetingId: string) => `fan-in:${meetingId}:deadlines:result`,
+  deadlinesResult: (meetingId: string) =>
+    `fan-in:${meetingId}:deadlines:result`,
 } as const;

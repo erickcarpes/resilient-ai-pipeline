@@ -36,13 +36,22 @@
         "tsConfigPath": "apps/cleaning-worker/tsconfig.app.json"
       }
     },
-    "insights-worker": {
+    "insights-summary-worker": {
       "type": "application",
-      "root": "apps/insights-worker",
+      "root": "apps/insights-summary-worker",
       "entryFile": "main",
-      "sourceRoot": "apps/insights-worker/src",
+      "sourceRoot": "apps/insights-summary-worker/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/insights-worker/tsconfig.app.json"
+        "tsConfigPath": "apps/insights-summary-worker/tsconfig.app.json"
+      }
+    },
+    "insights-deadlines-worker": {
+      "type": "application",
+      "root": "apps/insights-deadlines-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/insights-deadlines-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/insights-deadlines-worker/tsconfig.app.json"
       }
     },
     "shared": {

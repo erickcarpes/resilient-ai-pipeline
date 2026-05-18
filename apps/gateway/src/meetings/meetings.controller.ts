@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { MeetingsService } from './meetings.service';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
-import { MeetingStatusDto, MeetingSubmittedDto } from './dto/meeting-response.dto';
+import {
+  MeetingStatusDto,
+  MeetingSubmittedDto,
+} from './dto/meeting-response.dto';
 
 @Controller('meetings')
 export class MeetingsController {
