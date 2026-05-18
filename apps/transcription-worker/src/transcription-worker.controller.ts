@@ -3,7 +3,9 @@ import { TranscriptionWorkerService } from './transcription-worker.service';
 
 @Controller()
 export class TranscriptionWorkerController {
-  constructor(private readonly transcriptionWorkerService: TranscriptionWorkerService) {}
+  constructor(
+    private readonly transcriptionWorkerService: TranscriptionWorkerService,
+  ) {}
 
   @Get()
   getHello(): string {

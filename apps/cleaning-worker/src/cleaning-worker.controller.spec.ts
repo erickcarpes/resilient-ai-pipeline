@@ -11,7 +11,9 @@ describe('CleaningWorkerController', () => {
       providers: [CleaningWorkerService],
     }).compile();
 
-    cleaningWorkerController = app.get<CleaningWorkerController>(CleaningWorkerController);
+    cleaningWorkerController = app.get<CleaningWorkerController>(
+      CleaningWorkerController,
+    );
   });
 
   describe('root', () => {

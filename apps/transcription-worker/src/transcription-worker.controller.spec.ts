@@ -11,7 +11,9 @@ describe('TranscriptionWorkerController', () => {
       providers: [TranscriptionWorkerService],
     }).compile();
 
-    transcriptionWorkerController = app.get<TranscriptionWorkerController>(TranscriptionWorkerController);
+    transcriptionWorkerController = app.get<TranscriptionWorkerController>(
+      TranscriptionWorkerController,
+    );
   });
 
   describe('root', () => {

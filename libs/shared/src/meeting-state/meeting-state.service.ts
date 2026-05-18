@@ -73,7 +73,9 @@ export class MeetingStateService {
   async setCompleted(meetingId: string, hasPartial: boolean): Promise<void> {
     const meeting = await this.get(meetingId);
     if (!meeting) return;
-    meeting.status = hasPartial ? MeetingStatus.PARTIAL : MeetingStatus.COMPLETED;
+    meeting.status = hasPartial
+      ? MeetingStatus.PARTIAL
+      : MeetingStatus.COMPLETED;
     meeting.updatedAt = new Date().toISOString();
     await this.redis.set(this.key(meetingId), JSON.stringify(meeting));
     this.logger.log(`[${meetingId}] Pipeline → ${meeting.status}`);

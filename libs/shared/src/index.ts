@@ -17,10 +17,7 @@ export {
 
 export { FAN_IN_KEYS, FAN_IN_TTL_SECONDS } from './models/fan-in.constants';
 
-export {
-  MeetingStatus,
-  type Meeting,
-} from './models/meeting.models';
+export { MeetingStatus, type Meeting } from './models/meeting.models';
 
 // Retry
 export {
