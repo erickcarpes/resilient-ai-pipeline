@@ -73,13 +73,14 @@ export class CleaningProcessor extends WorkerHost {
     let result: CleaningResult;
     try {
       const transcript = job.data.transcription!.transcript;
-      result = await withRetry(
-        async () => {
-          await this.cb.isAllowed(SERVICE, CB_CONFIG);
-          return withTimeout(this.mock.clean(transcript), TIMEOUT_MS, 'Cleaning');
-        },
-        RETRY_OPTS,
-      );
+      result = await withRetry(async () => {
+        await this.cb.isAllowed(SERVICE, CB_CONFIG);
+        return withTimeout(
+          (signal) => this.mock.clean(transcript, signal),
+          TIMEOUT_MS,
+          'Cleaning',
+        );
+      }, RETRY_OPTS);
       await this.cb.recordSuccess(SERVICE);
     } catch (err) {
       if (!(err instanceof CircuitOpenError)) {

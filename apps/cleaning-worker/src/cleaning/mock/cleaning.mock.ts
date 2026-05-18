@@ -6,15 +6,22 @@ import type { CleaningResult } from '@pipeline/shared';
 export class CleaningMockService {
   private readonly logger = new Logger(CleaningMockService.name);
 
-  async clean(transcript: string): Promise<CleaningResult> {
+  async clean(
+    transcript: string,
+    signal?: AbortSignal,
+  ): Promise<CleaningResult> {
     const errorProb = parseFloat(process.env.MOCK_CLEANING_ERROR_PROB ?? '0.2');
+
+    if (signal?.aborted) return undefined as never;
 
     if (Math.random() < errorProb) {
       this.logger.warn('[CHAOS] Injecting cleaning error...');
       throw new Error('Mock Cleaning API: NLP service unavailable');
     }
 
-    await sleep(Math.floor(Math.random() * 500 + 200));
+    await sleep(Math.floor(Math.random() * 500 + 200), signal);
+
+    if (signal?.aborted) return undefined as never;
 
     const fillerWords = ['uh', 'um', 'like', 'you know', 'basically'];
     let cleaned = transcript;

@@ -6,7 +6,6 @@ import {
   QUEUE_NAMES,
   type JobPayload,
   type SummaryResult,
-  type DeadlinesResult,
   withRetry,
   withTimeout,
   CircuitBreakerService,
@@ -14,7 +13,6 @@ import {
   CircuitOpenError,
   IdempotencyService,
   MeetingStateService,
-  MeetingStatus,
   MaxRetriesExceededError,
   FAN_IN_KEYS,
   FAN_IN_TTL_SECONDS,
@@ -55,9 +53,14 @@ export class SummaryProcessor extends WorkerHost {
     const { meetingId, idempotencyKey } = job.data;
     this.logger.log(`[${meetingId}] Summary attempt #${job.attemptsMade + 1}`);
 
-    const cached = await this.idempotency.get<SummaryResult>(STAGE, idempotencyKey);
+    const cached = await this.idempotency.get<SummaryResult>(
+      STAGE,
+      idempotencyKey,
+    );
     if (cached) {
-      this.logger.log(`[${meetingId}] Summary cache HIT — running Fan-In check`);
+      this.logger.log(
+        `[${meetingId}] Summary cache HIT — running Fan-In check`,
+      );
       await this.fanIn(meetingId, cached);
       return cached;
     }
@@ -66,17 +69,14 @@ export class SummaryProcessor extends WorkerHost {
     let result: SummaryResult;
     try {
       const transcript = job.data.cleaning!.cleanedTranscript;
-      result = await withRetry(
-        async () => {
-          await this.cb.isAllowed(SERVICE, CB_CONFIG);
-          return withTimeout(
-            this.mock.extract(transcript),
-            TIMEOUT_MS,
-            'Summary',
-          );
-        },
-        RETRY_OPTS,
-      );
+      result = await withRetry(async () => {
+        await this.cb.isAllowed(SERVICE, CB_CONFIG);
+        return withTimeout(
+          (signal) => this.mock.extract(transcript, signal),
+          TIMEOUT_MS,
+          'Summary',
+        );
+      }, RETRY_OPTS);
       await this.cb.recordSuccess(SERVICE);
     } catch (err) {
       if (!(err instanceof CircuitOpenError)) {
@@ -141,6 +141,8 @@ export class SummaryProcessor extends WorkerHost {
     if (!job) return;
     // Summary worker never truly "fails" the pipeline — it uses fallback
     // This is called only for infrastructure failures (Redis down, etc.)
-    this.logger.error(`[${job.data.meetingId}] Summary job infrastructure failure: ${err.message}`);
+    this.logger.error(
+      `[${job.data.meetingId}] Summary job infrastructure failure: ${err.message}`,
+    );
   }
 }

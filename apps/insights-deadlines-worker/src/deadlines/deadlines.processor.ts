@@ -51,9 +51,14 @@ export class DeadlinesProcessor extends WorkerHost {
 
   async process(job: Job<JobPayload>): Promise<DeadlinesResult> {
     const { meetingId, idempotencyKey } = job.data;
-    this.logger.log(`[${meetingId}] Deadlines attempt #${job.attemptsMade + 1}`);
+    this.logger.log(
+      `[${meetingId}] Deadlines attempt #${job.attemptsMade + 1}`,
+    );
 
-    const cached = await this.idempotency.get<DeadlinesResult>(STAGE, idempotencyKey);
+    const cached = await this.idempotency.get<DeadlinesResult>(
+      STAGE,
+      idempotencyKey,
+    );
     if (cached) {
       await this.fanIn(meetingId, cached);
       return cached;
@@ -62,17 +67,14 @@ export class DeadlinesProcessor extends WorkerHost {
     let result: DeadlinesResult;
     try {
       const transcript = job.data.cleaning!.cleanedTranscript;
-      result = await withRetry(
-        async () => {
-          await this.cb.isAllowed(SERVICE, CB_CONFIG);
-          return withTimeout(
-            this.mock.extract(transcript),
-            TIMEOUT_MS,
-            'Deadlines',
-          );
-        },
-        RETRY_OPTS,
-      );
+      result = await withRetry(async () => {
+        await this.cb.isAllowed(SERVICE, CB_CONFIG);
+        return withTimeout(
+          (signal) => this.mock.extract(transcript, signal),
+          TIMEOUT_MS,
+          'Deadlines',
+        );
+      }, RETRY_OPTS);
       await this.cb.recordSuccess(SERVICE);
     } catch (err) {
       if (!(err instanceof CircuitOpenError)) {
@@ -119,7 +121,9 @@ export class DeadlinesProcessor extends WorkerHost {
     if (isSummaryDone) {
       this.logger.log(`[${meetingId}] Both insights done — consolidating`);
       // Check if Summary used fallback too (fetch from Redis)
-      const summaryRaw = await this.redis.get(FAN_IN_KEYS.summaryResult(meetingId));
+      const summaryRaw = await this.redis.get(
+        FAN_IN_KEYS.summaryResult(meetingId),
+      );
       const summaryFallback = summaryRaw
         ? (JSON.parse(summaryRaw) as { fallback: boolean }).fallback
         : false;
@@ -133,6 +137,8 @@ export class DeadlinesProcessor extends WorkerHost {
   @OnWorkerEvent('failed')
   async onFailed(job: Job<JobPayload> | undefined, err: Error): Promise<void> {
     if (!job) return;
-    this.logger.error(`[${job.data.meetingId}] Deadlines infrastructure failure: ${err.message}`);
+    this.logger.error(
+      `[${job.data.meetingId}] Deadlines infrastructure failure: ${err.message}`,
+    );
   }
 }

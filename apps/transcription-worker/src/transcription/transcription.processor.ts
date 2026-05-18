@@ -80,18 +80,15 @@ export class TranscriptionProcessor extends WorkerHost {
     // ── 3. Resilience: CB → withRetry → withTimeout → Mock ─────────────────
     let result: TranscriptionResult;
     try {
-      result = await withRetry(
-        async () => {
-          // Check circuit INSIDE retry so each attempt tests it
-          await this.cb.isAllowed(SERVICE, CB_CONFIG);
-          return withTimeout(
-            this.mock.transcribe(job.data.rawAudioText),
-            TIMEOUT_MS,
-            'Transcription',
-          );
-        },
-        RETRY_OPTS,
-      );
+      result = await withRetry(async () => {
+        // Check circuit INSIDE retry so each attempt tests it
+        await this.cb.isAllowed(SERVICE, CB_CONFIG);
+        return withTimeout(
+          (signal) => this.mock.transcribe(job.data.rawAudioText, signal),
+          TIMEOUT_MS,
+          'Transcription',
+        );
+      }, RETRY_OPTS);
       await this.cb.recordSuccess(SERVICE);
     } catch (err) {
       // Don't record circuit failure if circuit itself blocked the call
@@ -103,7 +100,11 @@ export class TranscriptionProcessor extends WorkerHost {
 
     // ── 4. Cache & persist ──────────────────────────────────────────────────
     await this.idempotency.set(STAGE, idempotencyKey, result);
-    await this.meetingState.addPipelineResult(meetingId, 'transcription', result);
+    await this.meetingState.addPipelineResult(
+      meetingId,
+      'transcription',
+      result,
+    );
 
     // ── 5. Fan-forward ──────────────────────────────────────────────────────
     await this.forwardToCleaning(job.data, result);

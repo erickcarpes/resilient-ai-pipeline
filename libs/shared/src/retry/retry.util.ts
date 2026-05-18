@@ -45,10 +45,85 @@ export class MaxRetriesExceededError extends Error {
 
 /**
  * Returns a Promise that resolves after `ms` milliseconds.
- * The building block for all delay-based operations.
+ *
+ * Accepts an optional AbortSignal. If the signal fires before the delay
+ * completes, the timer is cleared and the promise rejects immediately with
+ * an AbortError — preventing orphan code from running after a timeout.
+ *
+ * @example
+ * // Inside a mock, cooperatively respect cancellation:
+ * await sleep(15_000, signal);  // exits immediately when aborted
  */
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Sleep aborted', 'AbortError'));
+      return;
+    }
+
+    const timer = setTimeout(resolve, ms);
+
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        reject(new DOMException('Sleep aborted', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
+
+/**
+ * Races a factory function against a timeout, with cooperative cancellation.
+ *
+ * Unlike a naive `Promise.race([promise, timeout])`, this version passes an
+ * AbortSignal to the factory so the callee can exit cleanly when the timeout
+ * fires — preventing orphan logs, wasted CPU, and double side-effects.
+ *
+ * If the factory resolves/rejects before `ms`: cleans up the timer and
+ * returns/rethrows normally.
+ * If `ms` elapses first: aborts the signal and rejects with TimeoutError.
+ *
+ * @param fn    - Factory that receives an AbortSignal and returns a Promise.
+ * @param ms    - Timeout in milliseconds.
+ * @param label - Human-readable label used in the TimeoutError message.
+ *
+ * @example
+ * const result = await withTimeout(
+ *   (signal) => mockTranscriber.transcribe(payload, signal),
+ *   5000,
+ *   'TranscriptionAPI',
+ * );
+ */
+export const withTimeout = <T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  ms: number,
+  label = 'Operation',
+): Promise<T> => {
+  const controller = new AbortController();
+  const { signal } = controller;
+
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new TimeoutError(`${label} timed out after ${ms}ms`));
+    }, ms);
+
+    fn(signal).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        // Swallow AbortError — it was triggered by our own timeout above.
+        // The TimeoutError rejection above is the authoritative signal.
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        reject(err);
+      },
+    );
+  });
+};
 
 /**
  * Calculates exponential backoff delay.
@@ -88,38 +163,6 @@ export const calculateBackoff = (
  */
 export const addJitter = (delayMs: number, maxJitterMs = 500): number =>
   delayMs + Math.floor(Math.random() * maxJitterMs);
-
-/**
- * Races a promise against a timeout.
- *
- * If the promise resolves/rejects before `ms`: returns normally.
- * If `ms` elapses first: rejects with TimeoutError.
- *
- * Why is this critical?
- * A hanging external call (mock service that never responds) would block
- * the worker thread indefinitely. Timeout + retry = bounded wait time.
- *
- * @example
- * const result = await withTimeout(
- *   mockTranscriber.transcribe(payload),
- *   5000,
- *   'TranscriptionAPI'
- * );
- */
-export const withTimeout = <T>(
-  promise: Promise<T>,
-  ms: number,
-  label = 'Operation',
-): Promise<T> =>
-  Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new TimeoutError(`${label} timed out after ${ms}ms`)),
-        ms,
-      ),
-    ),
-  ]);
 
 // ─── Retry Orchestrator ───────────────────────────────────────────────────────
 

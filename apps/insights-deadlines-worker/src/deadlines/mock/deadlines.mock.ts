@@ -6,15 +6,24 @@ import type { DeadlinesResult } from '@pipeline/shared';
 export class DeadlinesMockService {
   private readonly logger = new Logger(DeadlinesMockService.name);
 
-  async extract(cleanedTranscript: string): Promise<DeadlinesResult> {
-    const errorProb = parseFloat(process.env.MOCK_INSIGHTS_ERROR_PROB ?? '0.25');
+  async extract(
+    cleanedTranscript: string,
+    signal?: AbortSignal,
+  ): Promise<DeadlinesResult> {
+    const errorProb = parseFloat(
+      process.env.MOCK_INSIGHTS_ERROR_PROB ?? '0.25',
+    );
+
+    if (signal?.aborted) return undefined as never;
 
     if (Math.random() < errorProb) {
       this.logger.warn('[CHAOS] Deadlines API error...');
       throw new Error('Mock Deadlines AI: context window exceeded');
     }
 
-    await sleep(Math.floor(Math.random() * 1200 + 600));
+    await sleep(Math.floor(Math.random() * 1200 + 600), signal);
+
+    if (signal?.aborted) return undefined as never;
 
     return {
       deadlines: [
