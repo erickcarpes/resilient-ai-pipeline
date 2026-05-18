@@ -43,7 +43,7 @@ const TIMEOUT_MS = parseInt(process.env.TRANSCRIPTION_TIMEOUT_MS ?? '5000', 10);
 const SERVICE = 'mock-transcription-api';
 const STAGE = 'transcription';
 
-@Processor(QUEUE_NAMES.TRANSCRIPTION)
+@Processor(QUEUE_NAMES.TRANSCRIPTION, { concurrency: 5 })
 export class TranscriptionProcessor extends WorkerHost {
   private readonly logger = new Logger(TranscriptionProcessor.name);
 

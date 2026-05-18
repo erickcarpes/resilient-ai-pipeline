@@ -35,7 +35,7 @@ const TIMEOUT_MS = parseInt(
 const SERVICE = 'mock-deadlines-api';
 const STAGE = 'deadlines';
 
-@Processor(QUEUE_NAMES.INSIGHTS_DEADLINES)
+@Processor(QUEUE_NAMES.INSIGHTS_DEADLINES, { concurrency: 2 })
 export class DeadlinesProcessor extends WorkerHost {
   private readonly logger = new Logger(DeadlinesProcessor.name);
 

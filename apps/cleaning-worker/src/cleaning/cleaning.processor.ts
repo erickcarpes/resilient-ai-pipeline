@@ -36,7 +36,7 @@ const FAN_OUT_JOB_OPTS = {
   removeOnFail: false,
 };
 
-@Processor(QUEUE_NAMES.CLEANING)
+@Processor(QUEUE_NAMES.CLEANING, { concurrency: 2 })
 export class CleaningProcessor extends WorkerHost {
   private readonly logger = new Logger(CleaningProcessor.name);
 

@@ -35,7 +35,7 @@ const TIMEOUT_MS = parseInt(
 const SERVICE = 'mock-summary-api';
 const STAGE = 'summary';
 
-@Processor(QUEUE_NAMES.INSIGHTS_SUMMARY)
+@Processor(QUEUE_NAMES.INSIGHTS_SUMMARY, { concurrency: 2 })
 export class SummaryProcessor extends WorkerHost {
   private readonly logger = new Logger(SummaryProcessor.name);
 
