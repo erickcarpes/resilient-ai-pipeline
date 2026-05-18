@@ -44,3 +44,4 @@ export { IdempotencyService } from './idempotency/idempotency.service';
 
 // Meeting State (used by all workers)
 export { MeetingStateService } from './meeting-state/meeting-state.service';
+export * from './observability/logger.module';
