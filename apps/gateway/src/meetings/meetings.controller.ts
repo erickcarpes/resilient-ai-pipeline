@@ -8,7 +8,9 @@ import {
   ParseIntPipe,
   ParseUUIDPipe,
   Post,
+  Res,
 } from '@nestjs/common';
+import { type Response } from 'express';
 import { MeetingsService } from './meetings.service';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import {
@@ -28,9 +30,17 @@ export class MeetingsController {
    * Idempotent: providing the same meetingId returns the existing state (200).
    */
   @Post()
-  @HttpCode(HttpStatus.ACCEPTED)
-  async submit(@Body() dto: CreateMeetingDto): Promise<MeetingSubmittedDto> {
-    return this.meetingsService.submit(dto);
+  async submit(
+    @Body() dto: CreateMeetingDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MeetingSubmittedDto> {
+    const result = await this.meetingsService.submit(dto);
+    if (result.isDuplicate) {
+      res.status(HttpStatus.OK);
+    } else {
+      res.status(HttpStatus.ACCEPTED);
+    }
+    return result;
   }
 
   /**

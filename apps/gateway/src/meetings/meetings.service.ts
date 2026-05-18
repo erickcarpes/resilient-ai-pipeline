@@ -70,6 +70,7 @@ export class MeetingsService {
         status: existing.status,
         message: 'Meeting already submitted. Check current status.',
         checkAt: `/meetings/${existing.id}`,
+        isDuplicate: true,
       };
     }
 

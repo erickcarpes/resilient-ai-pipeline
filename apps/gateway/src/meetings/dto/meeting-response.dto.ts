@@ -7,6 +7,7 @@ export class MeetingSubmittedDto {
   status: MeetingStatus;
   message: string;
   checkAt: string; // URL to poll for status: GET /meetings/:id
+  isDuplicate?: boolean;
 }
 
 // Response shape for GET /meetings/:id (200 OK)
