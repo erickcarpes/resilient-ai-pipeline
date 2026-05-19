@@ -176,6 +176,11 @@ export interface RetryOptions {
   /** Human-readable label for logging. */
   label?: string;
   /**
+   * Optional predicate to decide whether a failure should be retried.
+   * Return false to abort retries and rethrow the original error.
+   */
+  shouldRetry?: (error: Error, attempt: number) => boolean;
+  /**
    * Optional callback invoked BEFORE each retry.
    * Use this to log retry attempts in your workers.
    *
@@ -212,6 +217,10 @@ export const withRetry = async <T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
+
+      if (opts.shouldRetry && !opts.shouldRetry(lastError, attempt)) {
+        throw lastError;
+      }
 
       // If this was the last attempt, stop immediately (no sleep after final fail)
       if (attempt === opts.attempts) break;
