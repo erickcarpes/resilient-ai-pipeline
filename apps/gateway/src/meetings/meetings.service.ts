@@ -36,6 +36,11 @@ import {
   MeetingSubmittedDto,
 } from './dto/meeting-response.dto';
 
+const OUTER_RETRY_BACKOFF_MS = parseInt(
+  process.env.WORKER_RETRY_BACKOFF_MS ?? process.env.CB_COOLDOWN_MS ?? '30000',
+  10,
+);
+
 @Injectable()
 export class MeetingsService {
   private readonly logger = new Logger(MeetingsService.name);
@@ -106,7 +111,7 @@ export class MeetingsService {
       attempts: 5,
       backoff: {
         type: 'exponential',
-        delay: 1000, // base delay: 1s, 2s, 4s, 8s, 16s
+        delay: OUTER_RETRY_BACKOFF_MS,
       },
       // Keep jobs visible in Bull Board after completion/failure
       removeOnComplete: { count: 100 }, // Keep last 100 completed
