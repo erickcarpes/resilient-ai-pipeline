@@ -3,6 +3,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { SharedModule, QUEUE_NAMES } from '@pipeline/shared';
 import { CleaningProcessor } from './cleaning.processor';
 import { CleaningMockService } from './mock/cleaning.mock';
+import { ResilienceService } from '../services/resilience.service';
+import { CleaningService } from '../services/cleaning.service';
+import { WorkflowService } from '../services/workflow.service';
 
 @Module({
   imports: [
@@ -12,6 +15,12 @@ import { CleaningMockService } from './mock/cleaning.mock';
       { name: QUEUE_NAMES.INSIGHTS_DEADLINES },
     ),
   ],
-  providers: [CleaningProcessor, CleaningMockService],
+  providers: [
+    CleaningProcessor,
+    CleaningMockService,
+    ResilienceService,
+    CleaningService,
+    WorkflowService,
+  ],
 })
 export class CleaningModule {}
