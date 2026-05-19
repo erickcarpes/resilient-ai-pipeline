@@ -29,7 +29,7 @@ async function bootstrap() {
 
   console.log(`\n🚀 Gateway running at http://localhost:${port}`);
   console.log(`📊 Bull Board at    http://localhost:${port}/queues`);
-  console.log(`📡 Grafana at       http://localhost:3000\n`);
+  console.log(`📡 Grafana at       http://localhost:3300\n`);
 }
 
 bootstrap();
