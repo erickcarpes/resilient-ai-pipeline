@@ -53,9 +53,7 @@ export class TranscriptionProcessor extends WorkerHost {
     let succeeded = false;
 
     try {
-      // ── 1. Idempotency ───────────────────────────────────────────────────
-      // If we already processed this (BullMQ retry of a job that partially succeeded),
-      // skip the work and just re-enqueue the next stage.
+      // Step 1: idempotency short-circuit (avoid duplicate work on retries).
       const cached = await this.idempotency.get<TranscriptionResult>(
         STAGE,
         idempotencyKey,
@@ -69,18 +67,17 @@ export class TranscriptionProcessor extends WorkerHost {
         return cached;
       }
 
-      // ── 2. Update meeting to PROCESSING ──────────────────────────────────
+      // Step 2: mark pipeline state as processing.
       await this.workflow.markProcessing(meetingId);
 
-      // ── 3. Resilience: CB → Timeout → Mock ───────────────────────────────
-      // Encapsulated in a service so resilience rules are defined in one place.
+      // Step 3: run the resilient transcription call (CB + timeout).
       const result = await this.transcriptionService.transcribe(job.data);
 
-      // ── 4. Cache & persist ───────────────────────────────────────────────
+      // Step 4: cache + persist the result for idempotency and API reads.
       await this.idempotency.set(STAGE, idempotencyKey, result);
       await this.workflow.persistTranscriptionResult(meetingId, result);
 
-      // ── 5. Fan-forward ───────────────────────────────────────────────────
+      // Step 5: enqueue the next stage (cleaning).
       await this.workflow.enqueueCleaning(job.data, result);
       recordNextStageEnqueued(observability);
 

@@ -39,6 +39,7 @@ export class CleaningProcessor extends WorkerHost {
     const observability = startJobObservability(job, meetingId);
     let succeeded = false;
 
+    // Step 1: idempotency short-circuit (avoid duplicate work on retries).
     const cached = await this.idempotency.get<CleaningResult>(
       STAGE,
       idempotencyKey,
@@ -53,13 +54,17 @@ export class CleaningProcessor extends WorkerHost {
     }
 
     try {
+      // Step 2: mark pipeline state as processing.
       await this.workflow.markProcessing(meetingId);
 
+      // Step 3: run the resilient cleaning call (CB + timeout).
       const result = await this.cleaningService.clean(job.data);
 
+      // Step 4: cache + persist the result for idempotency and API reads.
       await this.idempotency.set(STAGE, idempotencyKey, result);
       await this.workflow.persistCleaningResult(meetingId, result);
 
+      // Step 5: fan-out to both insights queues.
       await this.workflow.fanOut(job.data, result);
       recordNextStageEnqueued(observability, 2);
       succeeded = true;

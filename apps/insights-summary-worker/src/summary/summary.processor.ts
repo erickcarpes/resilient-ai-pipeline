@@ -37,6 +37,7 @@ export class SummaryProcessor extends WorkerHost {
     const observability = startJobObservability(job, meetingId);
     let succeeded = false;
 
+    // Step 1: idempotency short-circuit (avoid duplicate work on retries).
     const cached = await this.idempotency.get<SummaryResult>(
       STAGE,
       idempotencyKey,
@@ -52,15 +53,17 @@ export class SummaryProcessor extends WorkerHost {
     }
 
     try {
+      // Step 2: extract summary (CB + timeout), fallback if needed.
       const result = await this.summaryService.extract(job.data);
       if (result.fallback) {
         this.logger.warn(`[${meetingId}] Summary failed — using fallback`);
       }
 
+      // Step 3: cache + persist the result for API reads.
       await this.idempotency.set(STAGE, idempotencyKey, result);
       await this.workflow.persistSummaryResult(meetingId, result);
 
-      // ── FAN-IN ───────────────────────────────────────────────────────────
+      // Step 4: fan-in coordination (second finisher consolidates state).
       await this.workflow.fanIn(meetingId, result);
 
       succeeded = true;

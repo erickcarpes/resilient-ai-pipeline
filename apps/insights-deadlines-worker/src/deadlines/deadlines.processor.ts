@@ -39,6 +39,7 @@ export class DeadlinesProcessor extends WorkerHost {
     const observability = startJobObservability(job, meetingId);
     let succeeded = false;
 
+    // Step 1: idempotency short-circuit (avoid duplicate work on retries).
     const cached = await this.idempotency.get<DeadlinesResult>(
       STAGE,
       idempotencyKey,
@@ -51,13 +52,17 @@ export class DeadlinesProcessor extends WorkerHost {
     }
 
     try {
+      // Step 2: extract deadlines (CB + timeout), fallback if needed.
       const result = await this.deadlinesService.extract(job.data);
       if (result.fallback) {
         this.logger.warn(`[${meetingId}] Deadlines failed — using fallback`);
       }
 
+      // Step 3: cache + persist the result for API reads.
       await this.idempotency.set(STAGE, idempotencyKey, result);
       await this.workflow.persistDeadlinesResult(meetingId, result);
+
+      // Step 4: fan-in coordination (second finisher consolidates state).
       await this.workflow.fanIn(meetingId, result);
 
       succeeded = true;
