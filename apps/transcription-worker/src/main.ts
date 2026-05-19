@@ -7,8 +7,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
   app.useGlobalInterceptors(new LoggerErrorInterceptor());
+  const logger = app.get(Logger);
   const port = parseInt(process.env.TRANSCRIPTION_WORKER_PORT ?? '3002', 10);
   await app.listen(port);
-  console.log(`🔊 Transcription Worker running on port ${port}`);
+  logger.log(`Transcription worker running on port ${port}`);
 }
 bootstrap();
