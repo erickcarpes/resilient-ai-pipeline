@@ -48,6 +48,7 @@ export class TranscriptionProcessor extends WorkerHost {
     const { meetingId, idempotencyKey } = job.data;
     this.logger.log(`[${meetingId}] attempt #${job.attemptsMade + 1}`);
 
+    // One context bundles metrics + tracing so the workflow stays easy to read.
     const observability = startJobObservability(job, meetingId);
     let succeeded = false;
 
@@ -72,6 +73,7 @@ export class TranscriptionProcessor extends WorkerHost {
       await this.workflow.markProcessing(meetingId);
 
       // ── 3. Resilience: CB → Timeout → Mock ───────────────────────────────
+      // Encapsulated in a service so resilience rules are defined in one place.
       const result = await this.transcriptionService.transcribe(job.data);
 
       // ── 4. Cache & persist ───────────────────────────────────────────────
