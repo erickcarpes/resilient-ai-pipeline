@@ -1,0 +1,227 @@
+{
+  "title": "Transcription Worker - Observability",
+  "uid": "transcription-worker-dashboard",
+  "tags": [
+    "transcription",
+    "worker",
+    "observability"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Logs em Tempo Real (Transcription Worker)",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "{service_name=\"transcription-worker\"} | json"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs por Minuto (Recebidos, Sucesso, Falha)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(pipeline_jobs_received_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "received"
+        },
+        {
+          "expr": "sum(rate(pipeline_jobs_succeeded_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "succeeded"
+        },
+        {
+          "expr": "sum(rate(pipeline_jobs_failed_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "failed"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Taxa de Erro (%)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "100 * sum(rate(pipeline_jobs_failed_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m])) / clamp_min(sum(rate(pipeline_jobs_received_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m])), 1)",
+          "legendFormat": "error_rate"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Duracao do Job (s) - p50/p95",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(pipeline_job_duration_seconds_bucket{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pipeline_job_duration_seconds_bucket{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia de Fila (s) - p50/p95",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(pipeline_queue_latency_seconds_bucket{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pipeline_queue_latency_seconds_bucket{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Retries e Circuit Breaker (por minuto)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(pipeline_jobs_retries_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "retries"
+        },
+        {
+          "expr": "sum(rate(pipeline_circuit_breaker_blocked_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "cb_blocked"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache Hit e Encaminhamento (por minuto)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(pipeline_idempotency_cache_hit_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "cache_hit"
+        },
+        {
+          "expr": "sum(rate(pipeline_next_stage_enqueued_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[1m]))",
+          "legendFormat": "enqueued"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs (ultimos 5m)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(increase(pipeline_jobs_received_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m]))",
+          "legendFormat": "received"
+        },
+        {
+          "expr": "sum(increase(pipeline_jobs_succeeded_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m]))",
+          "legendFormat": "succeeded"
+        },
+        {
+          "expr": "sum(increase(pipeline_jobs_failed_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m]))",
+          "legendFormat": "failed"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache/Enqueued (ultimos 5m)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 34
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(increase(pipeline_idempotency_cache_hit_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m]))",
+          "legendFormat": "cache_hit"
+        },
+        {
+          "expr": "sum(increase(pipeline_next_stage_enqueued_total{exported_service=\"transcription-worker\",stage=\"transcription\"}[5m]))",
+          "legendFormat": "enqueued"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ]
+}
