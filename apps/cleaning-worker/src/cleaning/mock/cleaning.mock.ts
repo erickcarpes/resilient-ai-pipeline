@@ -1,11 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sleep } from '@pipeline/shared';
 import type { CleaningResult } from '@pipeline/shared';
 
 @Injectable()
 export class CleaningMockService {
-  private readonly logger = new Logger(CleaningMockService.name);
-
   async clean(
     transcript: string,
     signal?: AbortSignal,
@@ -15,7 +13,6 @@ export class CleaningMockService {
     if (signal?.aborted) return undefined as never;
 
     if (Math.random() < errorProb) {
-      this.logger.warn('[CHAOS] Injecting cleaning error...');
       throw new Error('Mock Cleaning API: NLP service unavailable');
     }
 

@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
-import { RedisModule, SharedModule, LoggerModule } from '@pipeline/shared';
+import { RedisModule, SharedModule } from '@pipeline/shared';
 import { appConfig } from './config/app.config';
 import { MeetingsModule } from './meetings/meetings.module';
 
@@ -50,7 +50,6 @@ import { MeetingsModule } from './meetings/meetings.module';
     }),
 
     // ── Shared + Feature Modules ─────────────────────────────────────────────
-    LoggerModule,
     SharedModule,
     MeetingsModule,
   ],

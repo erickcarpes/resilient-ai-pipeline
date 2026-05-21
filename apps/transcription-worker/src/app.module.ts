@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { RedisModule, SharedModule, QUEUE_NAMES, LoggerModule } from '@pipeline/shared';
+import { RedisModule, SharedModule, QUEUE_NAMES } from '@pipeline/shared';
 import { TranscriptionModule } from './transcription/transcription.module';
 
 @Module({
@@ -19,7 +19,6 @@ import { TranscriptionModule } from './transcription/transcription.module';
     }),
     // Register the queue this worker CONSUMES from
     BullModule.registerQueue({ name: QUEUE_NAMES.TRANSCRIPTION }),
-    LoggerModule,
     SharedModule,
     TranscriptionModule,
   ],

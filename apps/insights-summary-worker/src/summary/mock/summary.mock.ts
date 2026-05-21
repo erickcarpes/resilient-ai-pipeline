@@ -1,11 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sleep } from '@pipeline/shared';
 import type { SummaryResult } from '@pipeline/shared';
 
 @Injectable()
 export class SummaryMockService {
-  private readonly logger = new Logger(SummaryMockService.name);
-
   async extract(
     cleanedTranscript: string,
     signal?: AbortSignal,
@@ -17,7 +15,6 @@ export class SummaryMockService {
     if (signal?.aborted) return undefined as never;
 
     if (Math.random() < errorProb) {
-      this.logger.warn('[CHAOS] Summary API error...');
       throw new Error('Mock Summary AI: rate limit exceeded');
     }
 

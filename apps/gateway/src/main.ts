@@ -1,13 +1,10 @@
 import '@pipeline/shared/observability/instrumentation';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
-  app.useLogger(app.get(Logger));
-  app.useGlobalInterceptors(new LoggerErrorInterceptor());
 
   // ── Global Validation Pipe ─────────────────────────────────────────────────
   // Runs class-validator rules on every request body automatically.
@@ -26,10 +23,6 @@ async function bootstrap() {
 
   const port = parseInt(process.env.GATEWAY_PORT ?? '3001', 10);
   await app.listen(port);
-
-  console.log(`\n🚀 Gateway running at http://localhost:${port}`);
-  console.log(`📊 Bull Board at    http://localhost:${port}/queues`);
-  console.log(`📡 Grafana at       http://localhost:3300\n`);
 }
 
 bootstrap();

@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import {
@@ -9,19 +8,10 @@ import {
 } from '@pipeline/shared';
 import { DeadlinesService } from '../services/deadlines.service';
 import { WorkflowService } from '../services/workflow.service';
-import {
-  finalizeObservability,
-  recordFailure,
-  recordIdempotencyHit,
-  recordSuccess,
-  startJobObservability,
-} from '../observability/deadlines.observability';
 const STAGE = 'deadlines';
 
 @Processor(QUEUE_NAMES.INSIGHTS_DEADLINES, { concurrency: 2 })
 export class DeadlinesProcessor extends WorkerHost {
-  private readonly logger = new Logger(DeadlinesProcessor.name);
-
   constructor(
     private readonly idempotency: IdempotencyService,
     private readonly deadlinesService: DeadlinesService,
@@ -32,12 +22,6 @@ export class DeadlinesProcessor extends WorkerHost {
 
   async process(job: Job<JobPayload>): Promise<DeadlinesResult> {
     const { meetingId, idempotencyKey } = job.data;
-    this.logger.log(
-      `[${meetingId}] Deadlines attempt #${job.attemptsMade + 1}`,
-    );
-
-    const observability = startJobObservability(job, meetingId);
-    let succeeded = false;
 
     // Step 1: idempotency short-circuit (avoid duplicate work on retries).
     const cached = await this.idempotency.get<DeadlinesResult>(
@@ -45,44 +29,25 @@ export class DeadlinesProcessor extends WorkerHost {
       idempotencyKey,
     );
     if (cached) {
-      recordIdempotencyHit(observability);
       await this.workflow.fanIn(meetingId, cached);
-      succeeded = true;
       return cached;
     }
 
-    try {
-      // Step 2: extract deadlines (CB + timeout), fallback if needed.
-      const result = await this.deadlinesService.extract(job.data);
-      if (result.fallback) {
-        this.logger.warn(`[${meetingId}] Deadlines failed — using fallback`);
-      }
+    // Step 2: extract deadlines (CB + timeout), fallback if needed.
+    const result = await this.deadlinesService.extract(job.data);
 
-      // Step 3: cache + persist the result for API reads.
-      await this.idempotency.set(STAGE, idempotencyKey, result);
-      await this.workflow.persistDeadlinesResult(meetingId, result);
+    // Step 3: cache + persist the result for API reads.
+    await this.idempotency.set(STAGE, idempotencyKey, result);
+    await this.workflow.persistDeadlinesResult(meetingId, result);
 
-      // Step 4: fan-in coordination (second finisher consolidates state).
-      await this.workflow.fanIn(meetingId, result);
+    // Step 4: fan-in coordination (second finisher consolidates state).
+    await this.workflow.fanIn(meetingId, result);
 
-      succeeded = true;
-      return result;
-    } catch (err) {
-      recordFailure(observability, err as Error);
-      throw err;
-    } finally {
-      if (succeeded) {
-        recordSuccess(observability);
-      }
-      finalizeObservability(observability);
-    }
+    return result;
   }
 
   @OnWorkerEvent('failed')
   async onFailed(job: Job<JobPayload> | undefined, err: Error): Promise<void> {
     if (!job) return;
-    this.logger.error(
-      `[${job.data.meetingId}] Deadlines infrastructure failure: ${err.message}`,
-    );
   }
 }

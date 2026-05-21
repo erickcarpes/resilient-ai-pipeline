@@ -9,14 +9,12 @@
 // cancellable, and we check signal.aborted before logging chaos events so that
 // "orphan" log lines never appear after a timeout fires.
 // =============================================================================
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sleep } from '@pipeline/shared';
 import type { TranscriptionResult } from '@pipeline/shared';
 
 @Injectable()
 export class TranscriptionMockService {
-  private readonly logger = new Logger(TranscriptionMockService.name);
-
   async transcribe(
     rawText: string,
     signal?: AbortSignal,
@@ -32,7 +30,6 @@ export class TranscriptionMockService {
     // The AbortSignal cancels the sleep cooperatively when the timeout fires,
     // so this function exits without reaching the lines below (no orphan logs).
     if (Math.random() < timeoutProb) {
-      this.logger.warn('[CHAOS] Injecting artificial timeout...');
       await sleep(15_000, signal); // aborts immediately when signal fires
     }
 
@@ -41,7 +38,6 @@ export class TranscriptionMockService {
 
     // Inject error chaos — simulates API being down
     if (Math.random() < errorProb) {
-      this.logger.warn('[CHAOS] Injecting API error...');
       throw new Error('Mock Transcription API: 503 Service Unavailable');
     }
 

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import {
   FAN_IN_KEYS,
@@ -10,8 +10,6 @@ import {
 
 @Injectable()
 export class WorkflowService {
-  private readonly logger = new Logger(WorkflowService.name);
-
   constructor(
     private readonly meetingState: MeetingStateService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
@@ -41,11 +39,8 @@ export class WorkflowService {
     );
 
     if (isDeadlinesDone) {
-      this.logger.log(`[${meetingId}] Both insights done — consolidating`);
       const hasPartial = summaryResult.fallback;
       await this.meetingState.setCompleted(meetingId, hasPartial);
-    } else {
-      this.logger.log(`[${meetingId}] Summary done — waiting for deadlines`);
     }
   }
 }

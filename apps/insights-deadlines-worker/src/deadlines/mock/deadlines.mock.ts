@@ -1,11 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sleep } from '@pipeline/shared';
 import type { DeadlinesResult } from '@pipeline/shared';
 
 @Injectable()
 export class DeadlinesMockService {
-  private readonly logger = new Logger(DeadlinesMockService.name);
-
   async extract(
     cleanedTranscript: string,
     signal?: AbortSignal,
@@ -17,7 +15,6 @@ export class DeadlinesMockService {
     if (signal?.aborted) return undefined as never;
 
     if (Math.random() < errorProb) {
-      this.logger.warn('[CHAOS] Deadlines API error...');
       throw new Error('Mock Deadlines AI: context window exceeded');
     }
 

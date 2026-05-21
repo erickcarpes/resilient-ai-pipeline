@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import {
@@ -10,20 +9,10 @@ import {
 } from '@pipeline/shared';
 import { CleaningService } from '../services/cleaning.service';
 import { WorkflowService } from '../services/workflow.service';
-import {
-  finalizeObservability,
-  recordFailure,
-  recordIdempotencyHit,
-  recordNextStageEnqueued,
-  recordSuccess,
-  startJobObservability,
-} from '../observability/cleaning.observability';
 const STAGE = 'cleaning';
 
 @Processor(QUEUE_NAMES.CLEANING, { concurrency: 2 })
 export class CleaningProcessor extends WorkerHost {
-  private readonly logger = new Logger(CleaningProcessor.name);
-
   constructor(
     private readonly idempotency: IdempotencyService,
     private readonly cleaningService: CleaningService,
@@ -34,10 +23,6 @@ export class CleaningProcessor extends WorkerHost {
 
   async process(job: Job<JobPayload>): Promise<CleaningResult> {
     const { meetingId, idempotencyKey } = job.data;
-    this.logger.log(`[${meetingId}] Cleaning attempt #${job.attemptsMade + 1}`);
-
-    const observability = startJobObservability(job, meetingId);
-    let succeeded = false;
 
     // Step 1: idempotency short-circuit (avoid duplicate work on retries).
     const cached = await this.idempotency.get<CleaningResult>(
@@ -45,39 +30,24 @@ export class CleaningProcessor extends WorkerHost {
       idempotencyKey,
     );
     if (cached) {
-      recordIdempotencyHit(observability);
-      this.logger.log(`[${meetingId}] Cache HIT — fan-out to insights`);
       await this.workflow.fanOut(job.data, cached);
-      recordNextStageEnqueued(observability, 2);
-      succeeded = true;
       return cached;
     }
 
-    try {
-      // Step 2: mark pipeline state as processing.
-      await this.workflow.markProcessing(meetingId);
+    // Step 2: mark pipeline state as processing.
+    await this.workflow.markProcessing(meetingId);
 
-      // Step 3: run the resilient cleaning call (CB + timeout).
-      const result = await this.cleaningService.clean(job.data);
+    // Step 3: run the resilient cleaning call (CB + timeout).
+    const result = await this.cleaningService.clean(job.data);
 
-      // Step 4: cache + persist the result for idempotency and API reads.
-      await this.idempotency.set(STAGE, idempotencyKey, result);
-      await this.workflow.persistCleaningResult(meetingId, result);
+    // Step 4: cache + persist the result for idempotency and API reads.
+    await this.idempotency.set(STAGE, idempotencyKey, result);
+    await this.workflow.persistCleaningResult(meetingId, result);
 
-      // Step 5: fan-out to both insights queues.
-      await this.workflow.fanOut(job.data, result);
-      recordNextStageEnqueued(observability, 2);
-      succeeded = true;
-      return result;
-    } catch (err) {
-      recordFailure(observability, err as Error);
-      throw err;
-    } finally {
-      if (succeeded) {
-        recordSuccess(observability);
-      }
-      finalizeObservability(observability);
-    }
+    // Step 5: fan-out to both insights queues.
+    await this.workflow.fanOut(job.data, result);
+
+    return result;
   }
 
   @OnWorkerEvent('failed')

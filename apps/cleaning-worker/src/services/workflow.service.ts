@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
   JobPayload,
@@ -18,8 +18,6 @@ const FAN_OUT_JOB_OPTS = {
 
 @Injectable()
 export class WorkflowService {
-  private readonly logger = new Logger(WorkflowService.name);
-
   constructor(
     private readonly meetingState: MeetingStateService,
     @InjectQueue(QUEUE_NAMES.INSIGHTS_SUMMARY)
@@ -40,23 +38,26 @@ export class WorkflowService {
   }
 
   async fanOut(payload: JobPayload, result: CleaningResult): Promise<void> {
-    const enriched = { ...payload, cleaning: result };
     const { meetingId } = payload;
 
     await Promise.all([
-      this.summaryQueue.add('process', enriched, {
-        jobId: `${meetingId}-summary`,
-        ...FAN_OUT_JOB_OPTS,
-      }),
-      this.deadlinesQueue.add('process', enriched, {
-        jobId: `${meetingId}-deadlines`,
-        ...FAN_OUT_JOB_OPTS,
-      }),
+      this.summaryQueue.add(
+        'process',
+        { ...payload, cleaning: result },
+        {
+          jobId: `${meetingId}-summary`,
+          ...FAN_OUT_JOB_OPTS,
+        },
+      ),
+      this.deadlinesQueue.add(
+        'process',
+        { ...payload, cleaning: result },
+        {
+          jobId: `${meetingId}-deadlines`,
+          ...FAN_OUT_JOB_OPTS,
+        },
+      ),
     ]);
-
-    this.logger.log(
-      `[${meetingId}] Fan-Out → insights-summary + insights-deadlines`,
-    );
   }
 
   async markFailed(meetingId: string, reason: string): Promise<void> {

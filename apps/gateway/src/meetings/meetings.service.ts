@@ -22,7 +22,7 @@
 //    - removeOnFail: false    → keep failed jobs as our DLQ (inspectable)
 // =============================================================================
 
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { randomUUID } from 'crypto';
@@ -43,8 +43,6 @@ const OUTER_RETRY_BACKOFF_MS = parseInt(
 
 @Injectable()
 export class MeetingsService {
-  private readonly logger = new Logger(MeetingsService.name);
-
   constructor(
     @Inject(MEETING_REPOSITORY)
     private readonly meetingRepository: IMeetingRepository,
@@ -67,9 +65,6 @@ export class MeetingsService {
     // ── HTTP-level idempotency check ─────────────────────────────────────────
     const existing = await this.meetingRepository.findById(meetingId);
     if (existing) {
-      this.logger.log(
-        `[${meetingId}] Idempotent request — returning existing meeting state`,
-      );
       return {
         meetingId: existing.id,
         status: existing.status,
@@ -117,8 +112,6 @@ export class MeetingsService {
       removeOnComplete: { count: 100 }, // Keep last 100 completed
       removeOnFail: false, // Never remove failed jobs (our DLQ)
     });
-
-    this.logger.log(`[${meetingId}] Meeting submitted → transcription queue`);
 
     return {
       meetingId,
