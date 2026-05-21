@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { RedisModule, SharedModule, QUEUE_NAMES } from '@pipeline/shared';
+import { RedisModule, SharedModule } from '@pipeline/shared';
 import { DeadlinesModule } from './deadlines/deadlines.module';
 
 @Module({

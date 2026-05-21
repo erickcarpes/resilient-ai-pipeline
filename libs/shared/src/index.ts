@@ -2,6 +2,11 @@ export { SharedModule } from './shared.module';
 export { RedisModule } from './redis/redis.module';
 export { REDIS_CLIENT } from './redis/redis.constants';
 
+// Logging
+export { LoggerModule } from './logging/logger.module';
+export { AppLogger } from './logging/logger.service';
+export type { LogContext, LogRecord } from './logging/log.types';
+
 // Models
 export {
   JobState,

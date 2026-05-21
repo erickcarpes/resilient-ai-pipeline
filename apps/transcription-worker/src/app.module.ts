@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { RedisModule, SharedModule, QUEUE_NAMES } from '@pipeline/shared';
 import { TranscriptionModule } from './transcription/transcription.module';
+import { QUEUE_NAMES, RedisModule, SharedModule } from '@pipeline/shared';
 
 @Module({
   imports: [
