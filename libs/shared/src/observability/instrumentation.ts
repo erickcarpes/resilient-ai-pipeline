@@ -27,12 +27,7 @@ const sdk = new NodeSDK({
       // Disable noisy instrumentations
       '@opentelemetry/instrumentation-fs': { enabled: false },
       '@opentelemetry/instrumentation-net': { enabled: false },
-      '@opentelemetry/instrumentation-pino': {
-        // Automatically inject trace_id/span_id into Pino logs
-        logHook: (span, record) => {
-          record['traceId'] = span.spanContext().traceId;
-        },
-      },
+      '@opentelemetry/instrumentation-pino': {},
     }),
   ],
 });
@@ -40,7 +35,7 @@ const sdk = new NodeSDK({
 sdk.start();
 
 const hostMetrics = new HostMetrics({
-  meterProvider: metrics.getMeterProvider() as any,
+  meterProvider: metrics.getMeterProvider(),
   name: 'host-metrics',
 });
 hostMetrics.start();

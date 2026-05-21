@@ -1,0 +1,199 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "description": "Loki log datasource",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "uid": "pipeline-logs",
+  "title": "Pipeline — Logs",
+  "description": "Operational log visualization for the resilient AI pipeline. Shows workflow execution, async orchestration, fan-out/fan-in coordination, failures, and resiliency events.",
+  "tags": ["logs", "pipeline", "operations"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "description": "Filter by pipeline service",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values({job=\"pipeline-logs\"}, service)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {},
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "label": "Component",
+        "description": "Filter by class/component within a service",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values({job=\"pipeline-logs\", service=~\"$service\"}, component)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {},
+        "sort": 1
+      }
+    ]
+  },
+
+  "panels": [
+
+    {
+      "id": 1,
+      "type": "row",
+      "title": "A — Pipeline Event Stream",
+      "description": "Full lifecycle of a meeting through the distributed workflow: from HTTP submission to pipeline completion.",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "Pipeline Event Stream",
+      "description": "All key workflow events ordered by time. Use meetingId in the search bar to trace a single meeting through all stages.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 1 },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"pipeline-logs\", service=~\"$service\", component=~\"$component\"} | json | event=~\"MEETING_CREATE_REQUESTED|MEETING_ENQUEUED|JOB_STARTED|JOB_COMPLETED|PIPELINE_STATE_PROCESSING|PIPELINE_STAGE_ENQUEUED|PIPELINE_FAN_OUT|FAN_IN_SUMMARY_DONE|FAN_IN_DEADLINES_DONE|PIPELINE_STATE_COMPLETED|IDEMPOTENCY_HIT\"",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ]
+    },
+
+    {
+      "id": 3,
+      "type": "row",
+      "title": "B — Fan-out / Fan-in Orchestration",
+      "description": "Visualize the parallel execution of the insights stages (summary + deadlines) and the aggregation into a final completed state.",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Fan-out & Fan-in Events",
+      "description": "PIPELINE_FAN_OUT fires when cleaning dispatches both insights queues in parallel. FAN_IN_*_DONE fires as each branch finishes. PIPELINE_STATE_COMPLETED fires only in the second finisher — the `finisher` field tells you which branch closed the pipeline.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 18 },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"pipeline-logs\", service=~\"$service\"} | json | event=~\"PIPELINE_FAN_OUT|FAN_IN_SUMMARY_DONE|FAN_IN_DEADLINES_DONE|PIPELINE_STATE_COMPLETED\"",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ]
+    },
+
+    {
+      "id": 5,
+      "type": "row",
+      "title": "C — Circuit Breaker Transitions",
+      "description": "State machine transitions of the circuit breaker for each external API. Useful to understand resiliency behavior during chaos tests.",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 }
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Circuit Breaker Events",
+      "description": "CLOSED→OPEN: failure threshold reached. OPEN→HALF_OPEN: cooldown expired, probing recovery. HALF_OPEN→CLOSED: recovery succeeded. HALF_OPEN→OPEN: probe failed, staying open.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 31 },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"pipeline-logs\", service=~\"$service\"} | json | event=~\"CIRCUIT_BREAKER_CLOSED_TO_OPEN|CIRCUIT_BREAKER_OPEN_TO_HALF_OPEN|CIRCUIT_BREAKER_HALF_OPEN_TO_CLOSED|CIRCUIT_BREAKER_HALF_OPEN_TO_OPEN|CIRCUIT_BREAKER_MANUALLY_RESET\"",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ]
+    },
+
+    {
+      "id": 7,
+      "type": "row",
+      "title": "D — Failures & Resiliency",
+      "description": "Failed jobs, enqueue failures, degraded fallbacks. Use this panel for operational debugging — every log line contains the meetingId and reason.",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 41 }
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "Failure & Degradation Events",
+      "description": "PIPELINE_STATE_FAILED: job exhausted all retries (DLQ). JOB_FAILED: deadlines/summary final failure. API_CALL_DEGRADED: insights worker used fallback response. MEETING_ENQUEUE_FAILED: gateway failed to push to BullMQ.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 42 },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"pipeline-logs\", service=~\"$service\"} | json | event=~\"PIPELINE_STATE_FAILED|JOB_FAILED|MEETING_ENQUEUE_FAILED|API_CALL_DEGRADED\"",
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ]
+    }
+
+  ]
+}
