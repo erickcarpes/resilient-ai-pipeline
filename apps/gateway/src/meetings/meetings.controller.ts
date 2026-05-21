@@ -17,10 +17,19 @@ import {
   MeetingStatusDto,
   MeetingSubmittedDto,
 } from './dto/meeting-response.dto';
+import { AppLogger } from '@pipeline/shared';
 
 @Controller('meetings')
 export class MeetingsController {
-  constructor(private readonly meetingsService: MeetingsService) {}
+  private readonly logger: AppLogger;
+  constructor(
+    private readonly meetingsService: MeetingsService,
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({
+      component: 'meetings.controller',
+    });
+  }
 
   /**
    * POST /meetings
@@ -34,6 +43,11 @@ export class MeetingsController {
     @Body() dto: CreateMeetingDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<MeetingSubmittedDto> {
+    const requestedId = dto.meetingId ?? 'auto';
+    this.logger.info({
+      event: 'MEETING_CREATE_REQUESTED',
+      meetingId: requestedId,
+    });
     const result = await this.meetingsService.submit(dto);
     if (result.isDuplicate) {
       res.status(HttpStatus.OK);

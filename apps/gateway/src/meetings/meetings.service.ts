@@ -26,7 +26,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { randomUUID } from 'crypto';
-import { QUEUE_NAMES, type JobPayload } from '@pipeline/shared';
+import { AppLogger, QUEUE_NAMES, type JobPayload } from '@pipeline/shared';
 import { Meeting, MeetingStatus } from './entities/meeting.entity';
 import type { IMeetingRepository } from './repositories/meeting.repository';
 import { MEETING_REPOSITORY } from './repositories/meeting.repository';
@@ -43,7 +43,9 @@ const OUTER_RETRY_BACKOFF_MS = parseInt(
 
 @Injectable()
 export class MeetingsService {
+  private readonly logger: AppLogger;
   constructor(
+    baseLogger: AppLogger,
     @Inject(MEETING_REPOSITORY)
     private readonly meetingRepository: IMeetingRepository,
 
@@ -51,7 +53,11 @@ export class MeetingsService {
     // Must match BullModule.registerQueue({ name: QUEUE_NAMES.TRANSCRIPTION })
     @InjectQueue(QUEUE_NAMES.TRANSCRIPTION)
     private readonly transcriptionQueue: Queue,
-  ) {}
+  ) {
+    this.logger = baseLogger.child({
+      component: 'meetings.service',
+    });
+  }
 
   /**
    * Submits a meeting for pipeline processing.
@@ -65,6 +71,11 @@ export class MeetingsService {
     // ── HTTP-level idempotency check ─────────────────────────────────────────
     const existing = await this.meetingRepository.findById(meetingId);
     if (existing) {
+      this.logger.info({
+        event: 'MEETING_IDEMPOTENCY_HIT',
+        meetingId,
+        status: existing.status,
+      });
       return {
         meetingId: existing.id,
         status: existing.status,
@@ -99,19 +110,35 @@ export class MeetingsService {
       submittedAt: now,
     };
 
-    await this.transcriptionQueue.add('process', payload, {
-      // Using meetingId as BullMQ jobId prevents enqueueing the same meeting twice.
-      // If a job with this ID already exists, BullMQ silently ignores the duplicate.
-      jobId: meetingId,
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: OUTER_RETRY_BACKOFF_MS,
-      },
-      // Keep jobs visible in Bull Board after completion/failure
-      removeOnComplete: { count: 100 }, // Keep last 100 completed
-      removeOnFail: false, // Never remove failed jobs (our DLQ)
-    });
+    try {
+      await this.transcriptionQueue.add('process', payload, {
+        // Using meetingId as BullMQ jobId prevents enqueueing the same meeting twice.
+        // If a job with this ID already exists, BullMQ silently ignores the duplicate.
+        jobId: meetingId,
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: OUTER_RETRY_BACKOFF_MS,
+        },
+        // Keep jobs visible in Bull Board after completion/failure
+        removeOnComplete: { count: 100 }, // Keep last 100 completed
+        removeOnFail: false, // Never remove failed jobs (our DLQ)
+      });
+      this.logger.info({
+        event: 'MEETING_ENQUEUED',
+        meetingId,
+        queue: QUEUE_NAMES.TRANSCRIPTION,
+        attempts: 5,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error({
+        event: 'MEETING_ENQUEUE_FAILED',
+        meetingId,
+        reason: message,
+      });
+      throw error;
+    }
 
     return {
       meetingId,

@@ -16,7 +16,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { QUEUE_NAMES } from '@pipeline/shared';
+import { LoggerModule, QUEUE_NAMES } from '@pipeline/shared';
 import { MeetingsController } from './meetings.controller';
 import { MeetingsService } from './meetings.service';
 import { MeetingRedisRepository } from './repositories/meeting.redis.repository';
@@ -36,6 +36,8 @@ import { MEETING_REPOSITORY } from './repositories/meeting.repository';
       { name: QUEUE_NAMES.INSIGHTS_SUMMARY },
       { name: QUEUE_NAMES.INSIGHTS_DEADLINES },
     ),
+
+    LoggerModule,
 
     BullBoardModule.forFeature(
       { name: QUEUE_NAMES.TRANSCRIPTION, adapter: BullMQAdapter },
