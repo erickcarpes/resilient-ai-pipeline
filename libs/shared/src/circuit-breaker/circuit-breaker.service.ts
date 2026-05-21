@@ -31,6 +31,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.constants';
+import { AppLogger } from '../logging/logger.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,9 +62,14 @@ export interface CircuitBreakerConfig {
 
 @Injectable()
 export class CircuitBreakerService {
-  private readonly logger = new Logger(CircuitBreakerService.name);
+  private readonly logger: AppLogger;
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({ component: 'circuit-breaker' });
+  }
 
   // ── Key helpers (keeps key naming consistent) ─────────────────────────────
 
@@ -117,9 +123,11 @@ export class CircuitBreakerService {
     if (elapsed >= config.cooldownMs) {
       // Cooldown expired → transition to HALF_OPEN and allow this probe call
       await this.redis.set(this.stateKey(service), CircuitState.HALF_OPEN);
-      this.logger.warn(
-        `[${service}] Circuit: OPEN → HALF_OPEN (probing recovery)`,
-      );
+      this.logger.warn({
+        event: 'CIRCUIT_BREAKER_OPEN_TO_HALF_OPEN',
+        service,
+        state: CircuitState.HALF_OPEN,
+      });
       return;
     }
 
@@ -142,7 +150,11 @@ export class CircuitBreakerService {
     ]);
 
     if (previousState !== CircuitState.CLOSED) {
-      this.logger.log(`[${service}] Circuit: ${previousState} → CLOSED ✅`);
+      this.logger.warn({
+        event: 'CIRCUIT_BREAKER_HALF_OPEN_TO_CLOSED',
+        service,
+        state: CircuitState.CLOSED,
+      });
     }
   }
 
@@ -166,9 +178,11 @@ export class CircuitBreakerService {
       // The probe call failed — recovery attempt unsuccessful
       await this.redis.set(this.stateKey(service), CircuitState.OPEN);
       await this.redis.set(this.openedAtKey(service), String(Date.now()));
-      this.logger.error(
-        `[${service}] Circuit: HALF_OPEN → OPEN 🔴 (probe failed)`,
-      );
+      this.logger.warn({
+        event: 'CIRCUIT_BREAKER_HALF_OPEN_TO_OPEN',
+        service,
+        state: CircuitState.OPEN,
+      });
       return;
     }
 
@@ -180,16 +194,22 @@ export class CircuitBreakerService {
     // State is CLOSED: increment failure counter
     const failures = await this.redis.incr(this.failuresKey(service));
 
-    this.logger.warn(
-      `[${service}] Circuit: failure ${failures}/${config.failureThreshold}`,
-    );
+    this.logger.warn({
+      event: 'CIRCUIT_BREAKER_CLOSED_TO_OPEN',
+      service,
+      failures,
+      state: CircuitState.OPEN,
+    });
 
     if (failures >= config.failureThreshold) {
       await this.redis.set(this.stateKey(service), CircuitState.OPEN);
       await this.redis.set(this.openedAtKey(service), String(Date.now()));
-      this.logger.error(
-        `[${service}] Circuit: CLOSED → OPEN 🔴 (${failures} consecutive failures)`,
-      );
+      this.logger.warn({
+        event: 'CIRCUIT_BREAKER_CLOSED_TO_OPEN',
+        service,
+        failures,
+        state: CircuitState.OPEN,
+      });
     }
   }
 
@@ -202,6 +222,10 @@ export class CircuitBreakerService {
       this.redis.del(this.failuresKey(service)),
       this.redis.del(this.openedAtKey(service)),
     ]);
-    this.logger.log(`[${service}] Circuit: manually reset to CLOSED`);
+    this.logger.warn({
+      event: 'CIRCUIT_BREAKER_MANUALLY_RESET',
+      service,
+      state: CircuitState.CLOSED,
+    });
   }
 }

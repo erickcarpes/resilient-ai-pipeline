@@ -6,14 +6,20 @@ import {
   MeetingStateService,
   REDIS_CLIENT,
   type DeadlinesResult,
+  AppLogger,
 } from '@pipeline/shared';
 
 @Injectable()
 export class WorkflowService {
+  private readonly logger: AppLogger;
+
   constructor(
     private readonly meetingState: MeetingStateService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({ component: 'deadlines.workflow' });
+  }
 
   async persistDeadlinesResult(
     meetingId: string,
@@ -37,6 +43,8 @@ export class WorkflowService {
       '1',
     );
 
+    this.logger.info({ event: 'FAN_IN_DEADLINES_DONE', meetingId });
+
     const isSummaryDone = await this.redis.exists(
       FAN_IN_KEYS.summaryDone(meetingId),
     );
@@ -49,6 +57,12 @@ export class WorkflowService {
         ? (JSON.parse(summaryRaw) as { fallback: boolean }).fallback
         : false;
       const hasPartial = deadlinesResult.fallback || summaryFallback;
+      this.logger.info({
+        event: 'PIPELINE_STATE_COMPLETED',
+        meetingId,
+        finisher: 'deadlines',
+        hasPartial,
+      });
       await this.meetingState.setCompleted(meetingId, hasPartial);
     }
   }

@@ -3,6 +3,7 @@ import {
   type CircuitBreakerConfig,
   type JobPayload,
   type TranscriptionResult,
+  AppLogger,
 } from '@pipeline/shared';
 import { ResilienceService } from './resilience.service';
 import { TranscriptionMockService } from '../transcription/mock/transcription.mock';
@@ -16,13 +17,23 @@ const CB_CONFIG: CircuitBreakerConfig = {
 
 @Injectable()
 export class TranscriptionService {
+  private readonly logger: AppLogger;
+
   constructor(
     private readonly mock: TranscriptionMockService,
     private readonly resilience: ResilienceService,
-  ) {}
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({ component: 'transcription.service' });
+  }
 
   async transcribe(payload: JobPayload): Promise<TranscriptionResult> {
-    return this.resilience.execute(
+    this.logger.info({
+      event: 'API_CALL_START',
+      service: SERVICE,
+      meetingId: payload.meetingId,
+    });
+    const result = await this.resilience.execute(
       SERVICE,
       (signal) => this.mock.transcribe(payload.rawAudioText, signal),
       {
@@ -31,5 +42,11 @@ export class TranscriptionService {
         circuitBreakerConfig: CB_CONFIG,
       },
     );
+    this.logger.info({
+      event: 'API_CALL_SUCCESS',
+      service: SERVICE,
+      meetingId: payload.meetingId,
+    });
+    return result;
   }
 }

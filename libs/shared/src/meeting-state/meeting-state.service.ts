@@ -4,7 +4,7 @@
 // Each worker calls this service after completing its stage.
 // The gateway reads the same Redis key when the client polls GET /meetings/:id.
 // =============================================================================
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.constants';
 import { Meeting, MeetingStatus } from '../models/meeting.models';
@@ -24,8 +24,6 @@ type PipelineResult =
 
 @Injectable()
 export class MeetingStateService {
-  private readonly logger = new Logger(MeetingStateService.name);
-
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
   private key(id: string) {
@@ -44,7 +42,6 @@ export class MeetingStateService {
     meeting.status = status;
     meeting.updatedAt = new Date().toISOString();
     await this.redis.set(this.key(meetingId), JSON.stringify(meeting));
-    this.logger.log(`[${meetingId}] State → ${status}`);
   }
 
   async addPipelineResult(
@@ -67,7 +64,6 @@ export class MeetingStateService {
     meeting.error = error;
     meeting.updatedAt = new Date().toISOString();
     await this.redis.set(this.key(meetingId), JSON.stringify(meeting));
-    this.logger.error(`[${meetingId}] FAILED: ${error}`);
   }
 
   async setCompleted(meetingId: string, hasPartial: boolean): Promise<void> {
@@ -78,6 +74,5 @@ export class MeetingStateService {
       : MeetingStatus.COMPLETED;
     meeting.updatedAt = new Date().toISOString();
     await this.redis.set(this.key(meetingId), JSON.stringify(meeting));
-    this.logger.log(`[${meetingId}] Pipeline → ${meeting.status}`);
   }
 }

@@ -3,6 +3,7 @@ import {
   type CircuitBreakerConfig,
   type JobPayload,
   type CleaningResult,
+  AppLogger,
 } from '@pipeline/shared';
 import { CleaningMockService } from '../cleaning/mock/cleaning.mock';
 import { ResilienceService } from './resilience.service';
@@ -16,14 +17,24 @@ const CB_CONFIG: CircuitBreakerConfig = {
 
 @Injectable()
 export class CleaningService {
+  private readonly logger: AppLogger;
+
   constructor(
     private readonly mock: CleaningMockService,
     private readonly resilience: ResilienceService,
-  ) {}
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({ component: 'cleaning.service' });
+  }
 
   async clean(payload: JobPayload): Promise<CleaningResult> {
     const transcript = payload.transcription!.transcript;
-    return this.resilience.execute(
+    this.logger.info({
+      event: 'API_CALL_START',
+      service: SERVICE,
+      meetingId: payload.meetingId,
+    });
+    const result = await this.resilience.execute(
       SERVICE,
       (signal) => this.mock.clean(transcript, signal),
       {
@@ -32,5 +43,11 @@ export class CleaningService {
         circuitBreakerConfig: CB_CONFIG,
       },
     );
+    this.logger.info({
+      event: 'API_CALL_SUCCESS',
+      service: SERVICE,
+      meetingId: payload.meetingId,
+    });
+    return result;
   }
 }

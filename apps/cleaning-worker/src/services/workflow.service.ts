@@ -6,6 +6,7 @@ import {
   MeetingStatus,
   QUEUE_NAMES,
   type CleaningResult,
+  AppLogger,
 } from '@pipeline/shared';
 import { Queue } from 'bullmq';
 
@@ -18,15 +19,21 @@ const FAN_OUT_JOB_OPTS = {
 
 @Injectable()
 export class WorkflowService {
+  private readonly logger: AppLogger;
+
   constructor(
     private readonly meetingState: MeetingStateService,
     @InjectQueue(QUEUE_NAMES.INSIGHTS_SUMMARY)
     private readonly summaryQueue: Queue,
     @InjectQueue(QUEUE_NAMES.INSIGHTS_DEADLINES)
     private readonly deadlinesQueue: Queue,
-  ) {}
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({ component: 'cleaning.workflow' });
+  }
 
-  async markProcessing(meetingId: string): Promise<void> {
+  async markProcessing(meetingId: string, stage: string): Promise<void> {
+    this.logger.info({ event: 'PIPELINE_STATE_PROCESSING', meetingId, stage });
     await this.meetingState.setJobState(meetingId, MeetingStatus.PROCESSING);
   }
 
@@ -58,9 +65,24 @@ export class WorkflowService {
         },
       ),
     ]);
+
+    this.logger.info({
+      event: 'PIPELINE_FAN_OUT',
+      meetingId,
+    });
   }
 
-  async markFailed(meetingId: string, reason: string): Promise<void> {
+  async markFailed(
+    meetingId: string,
+    reason: string,
+    stage: string,
+  ): Promise<void> {
+    this.logger.error({
+      event: 'PIPELINE_STATE_FAILED',
+      meetingId,
+      stage,
+      reason,
+    });
     await this.meetingState.setFailed(meetingId, reason);
   }
 }

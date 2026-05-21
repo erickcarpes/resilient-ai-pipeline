@@ -6,14 +6,20 @@ import {
   MeetingStateService,
   REDIS_CLIENT,
   type SummaryResult,
+  AppLogger,
 } from '@pipeline/shared';
 
 @Injectable()
 export class WorkflowService {
+  private readonly logger: AppLogger;
+
   constructor(
     private readonly meetingState: MeetingStateService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+    baseLogger: AppLogger,
+  ) {
+    this.logger = baseLogger.child({ component: 'summary.workflow' });
+  }
 
   async persistSummaryResult(
     meetingId: string,
@@ -34,12 +40,20 @@ export class WorkflowService {
       '1',
     );
 
+    this.logger.info({ event: 'FAN_IN_SUMMARY_DONE', meetingId });
+
     const isDeadlinesDone = await this.redis.exists(
       FAN_IN_KEYS.deadlinesDone(meetingId),
     );
 
     if (isDeadlinesDone) {
       const hasPartial = summaryResult.fallback;
+      this.logger.info({
+        event: 'PIPELINE_STATE_COMPLETED',
+        meetingId,
+        finisher: 'summary',
+        hasPartial,
+      });
       await this.meetingState.setCompleted(meetingId, hasPartial);
     }
   }
